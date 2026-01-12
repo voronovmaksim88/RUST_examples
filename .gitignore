@@ -1,0 +1,45 @@
+# Rust build artifacts
+/target/
+**/*.rs.bk
+*.pdb
+
+# Cargo
+# Cargo.lock - обычно коммитится для бинарных проектов, игнорируется для библиотек
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Editor backup files
+*~
+*.bak
+*.tmp
+
+# OS files
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Test coverage
+tarpaulin-report.html
+cobertura.xml
+*.gcda
+*.gcno
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
