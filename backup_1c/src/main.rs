@@ -14,17 +14,22 @@ use winapi::um::winbase::{STD_ERROR_HANDLE, STD_OUTPUT_HANDLE};
 #[cfg(windows)]
 const ENABLE_VIRTUAL_TERMINAL_PROCESSING: u32 = 0x0004;
 
-const DEFAULT_BACKUP_PATH: &str = r"D:\SynologyDriveVoronov\Копии 1С";
+const DEFAULT_BACKUP_DEST: &str = r"D:\SynologyDriveVoronov\Копии 1С";
+const DEFAULT_SOURCE_DB: &str = r"C:\Users\Maksim\Dropbox\1С бухгалтерия СибПЛК";
 const CONFIG_FILENAME: &str = "config.json";
 
 #[derive(Serialize, Deserialize)]
 struct Config {
-    backup_path: String,
+    backup_dest: String,
+    source_db: String,
 }
 
 impl Config {
-    fn new(backup_path: String) -> Self {
-        Self { backup_path }
+    fn new(backup_dest: String, source_db: String) -> Self {
+        Self {
+            backup_dest,
+            source_db,
+        }
     }
 
     fn load(path: &Path) -> Option<Self> {
@@ -80,10 +85,12 @@ fn main() {
     let exe_dir = get_exe_dir();
     let config_path = exe_dir.join(CONFIG_FILENAME);
 
-    let backup_path = get_backup_path(&config_path);
+    let backup_dest = get_path(&config_path, "backup_dest");
+    let source_db = get_path(&config_path, "source_db");
 
     println!();
-    println!("Путь для бэкапов: {}", backup_path);
+    println!("Путь для бэкапов: {}", backup_dest);
+    println!("Источник БД 1С:   {}", source_db);
     println!();
     print!("Нажмите Enter для выхода... ");
     io::stdout().flush().unwrap();
@@ -91,24 +98,72 @@ fn main() {
     io::stdin().read_line(&mut _input).unwrap();
 }
 
-fn get_backup_path(config_path: &Path) -> String {
+fn get_path(config_path: &Path, key: &str) -> String {
     let mut config = Config::load(config_path);
 
+    let default_path = match key {
+        "backup_dest" => DEFAULT_BACKUP_DEST,
+        "source_db" => DEFAULT_SOURCE_DB,
+        _ => unreachable!(),
+    };
+
     let mut path = if let Some(ref cfg) = config {
-        cfg.backup_path.clone()
+        match key {
+            "backup_dest" => cfg.backup_dest.clone(),
+            "source_db" => cfg.source_db.clone(),
+            _ => unreachable!(),
+        }
     } else {
-        DEFAULT_BACKUP_PATH.to_string()
+        default_path.to_string()
+    };
+
+    let step_label = match key {
+        "backup_dest" => "Шаг 1. Поиск пути хранения бэкапов .... ",
+        "source_db" => "Шаг 2. Поиск базы данных 1С .... ",
+        _ => unreachable!(),
+    };
+
+    let prompt_label = match key {
+        "backup_dest" => "Введите новый путь для бэкапов: ",
+        "source_db" => "Введите новый путь к базе данных 1С: ",
+        _ => unreachable!(),
     };
 
     loop {
-        print!("Шаг 1. Поиск пути хранения бэкапов .... ");
+        print!("{}", step_label);
         io::stdout().flush().unwrap();
 
         if Path::new(&path).exists() {
             println!("{}", "успешно".green());
 
-            if config.as_ref().map_or(true, |c| c.backup_path != path) {
-                config = Some(Config::new(path.clone()));
+            let need_save = match &config {
+                None => true,
+                Some(cfg) => match key {
+                    "backup_dest" => cfg.backup_dest != path,
+                    "source_db" => cfg.source_db != path,
+                    _ => unreachable!(),
+                },
+            };
+
+            if need_save {
+                let (dest, src) = match key {
+                    "backup_dest" => (
+                        path.clone(),
+                        config
+                            .as_ref()
+                            .map(|c| c.source_db.clone())
+                            .unwrap_or_else(|| DEFAULT_SOURCE_DB.to_string()),
+                    ),
+                    "source_db" => (
+                        config
+                            .as_ref()
+                            .map(|c| c.backup_dest.clone())
+                            .unwrap_or_else(|| DEFAULT_BACKUP_DEST.to_string()),
+                        path.clone(),
+                    ),
+                    _ => unreachable!(),
+                };
+                config = Some(Config::new(dest, src));
                 if let Some(ref cfg) = config {
                     cfg.save(config_path)
                         .expect("Не удалось сохранить config.json");
@@ -121,7 +176,7 @@ fn get_backup_path(config_path: &Path) -> String {
             println!();
             println!("Путь не найден: {}", path);
 
-            print!("Введите новый путь для бэкапов: ");
+            print!("{}", prompt_label);
             io::stdout().flush().unwrap();
 
             let mut input = String::new();
@@ -129,7 +184,7 @@ fn get_backup_path(config_path: &Path) -> String {
             path = input.trim().to_string();
 
             if path.is_empty() {
-                path = DEFAULT_BACKUP_PATH.to_string();
+                path = default_path.to_string();
             }
             println!();
         }
