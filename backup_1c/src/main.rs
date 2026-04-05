@@ -1,3 +1,4 @@
+use chrono::Local;
 use colored::Colorize;
 use serde::{Deserialize, Serialize};
 use std::env;
@@ -89,8 +90,22 @@ fn main() {
     let source_db = get_path(&config_path, "source_db");
 
     println!();
-    println!("Путь для бэкапов: {}", backup_dest);
-    println!("Источник БД 1С:   {}", source_db);
+
+    let backup_folder = prepare_backup_folder(&backup_dest, &source_db);
+
+    if backup_folder.is_none() {
+        println!();
+        print!("Нажмите Enter для выхода... ");
+        io::stdout().flush().unwrap();
+        let mut _input = String::new();
+        io::stdin().read_line(&mut _input).unwrap();
+        return;
+    }
+
+    let backup_folder = backup_folder.unwrap();
+
+    perform_backup(&source_db, &backup_folder);
+
     println!();
     print!("Нажмите Enter для выхода... ");
     io::stdout().flush().unwrap();
@@ -187,6 +202,101 @@ fn get_path(config_path: &Path, key: &str) -> String {
                 path = default_path.to_string();
             }
             println!();
+        }
+    }
+}
+
+fn get_today_folder_name() -> String {
+    Local::now().format("%Y-%m-%d").to_string()
+}
+
+fn is_folder_empty(folder: &Path) -> bool {
+    match fs::read_dir(folder) {
+        Ok(entries) => entries.count() == 0,
+        Err(_) => false,
+    }
+}
+
+fn prepare_backup_folder(backup_dest: &str, source_db: &str) -> Option<PathBuf> {
+    let today = get_today_folder_name();
+    let today_folder = Path::new(backup_dest).join(&today);
+
+    print!("Шаг 3. Подготовка папки бэкапа ({}) .... ", today);
+    io::stdout().flush().unwrap();
+
+    if today_folder.exists() {
+        let source_folder_name = Path::new(source_db)
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
+
+        let source_backup = today_folder.join(&source_folder_name);
+
+        if source_backup.exists() && source_backup.is_dir() {
+            println!("{}", "бэкап уже существует".yellow());
+            println!();
+            println!("Бэкап за {} уже был создан ранее.", today.yellow());
+            println!("Папка: {}", source_backup.display().to_string().cyan());
+            return None;
+        }
+
+        if is_folder_empty(&today_folder) {
+            println!("{}", "успешно (пустая папка найдена)".green());
+            return Some(today_folder);
+        }
+
+        println!("{}", "папка не пуста".yellow());
+        return Some(today_folder);
+    }
+
+    match fs::create_dir_all(&today_folder) {
+        Ok(()) => {
+            println!("{}", "успешно (создана новая папка)".green());
+            Some(today_folder)
+        }
+        Err(e) => {
+            println!("{}", "ошибка".red());
+            println!();
+            println!(
+                "Не удалось создать папку {}: {}",
+                today_folder.display(),
+                e.to_string().red()
+            );
+            None
+        }
+    }
+}
+
+fn perform_backup(source_db: &str, backup_folder: &Path) {
+    println!();
+
+    let source_folder_name = Path::new(source_db)
+        .file_name()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
+
+    let dest_path = backup_folder.join(&source_folder_name);
+
+    println!(
+        "Шаг 4. Копирование {} в {}",
+        source_db.cyan(),
+        dest_path.display().to_string().cyan()
+    );
+    println!();
+
+    let copy_options = fs_extra::dir::CopyOptions::new();
+    let copy_options = copy_options.overwrite(true).copy_inside(true);
+
+    match fs_extra::dir::copy(source_db, backup_folder, &copy_options) {
+        Ok(_) => {
+            println!("{}", "Бэкап успешно создан!".green().bold());
+            println!("Скопировано в: {}", dest_path.display().to_string().cyan());
+        }
+        Err(e) => {
+            println!("{}", "Ошибка при создании бэкапа!".red().bold());
+            println!("Ошибка: {}", e.to_string().red());
         }
     }
 }
