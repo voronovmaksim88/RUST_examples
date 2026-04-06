@@ -35,6 +35,13 @@
 
 ---
 
+### [`test-tauri`](test-tauri/)
+
+Десктоп и **Android** на **Tauri 2** + Vanilla TS. Пошаговая настройка окружения, сборка APK (в т.ч. под ARM64 для Samsung Galaxy A52), типичные ошибки Windows — в **[test-tauri/README.md](test-tauri/README.md)**. Скрипт переменных Android: [`scripts/set-android-env.ps1`](scripts/set-android-env.ps1).
+
+
+---
+
 ## Прочее
 
 - **[`.skills`](.skills/)** — вспомогательные заметки (например, про цветной вывод в консоли Windows), не отдельный Rust-проект.

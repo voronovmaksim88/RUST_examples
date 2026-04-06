@@ -1,22 +1,25 @@
-import { invoke } from "@tauri-apps/api/core";
+let count = 0;
 
-let greetInputEl: HTMLInputElement | null;
-let greetMsgEl: HTMLElement | null;
-
-async function greet() {
-  if (greetMsgEl && greetInputEl) {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    greetMsgEl.textContent = await invoke("greet", {
-      name: greetInputEl.value,
-    });
-  }
+function render(valueEl: HTMLElement) {
+  valueEl.textContent = String(count);
 }
 
 window.addEventListener("DOMContentLoaded", () => {
-  greetInputEl = document.querySelector("#greet-input");
-  greetMsgEl = document.querySelector("#greet-msg");
-  document.querySelector("#greet-form")?.addEventListener("submit", (e) => {
-    e.preventDefault();
-    greet();
+  const valueEl = document.querySelector("#counter-value");
+  const btnMinus = document.querySelector("#btn-minus");
+  const btnPlus = document.querySelector("#btn-plus");
+
+  if (!valueEl || !btnMinus || !btnPlus) return;
+
+  render(valueEl as HTMLElement);
+
+  btnMinus.addEventListener("click", () => {
+    count -= 1;
+    render(valueEl as HTMLElement);
+  });
+
+  btnPlus.addEventListener("click", () => {
+    count += 1;
+    render(valueEl as HTMLElement);
   });
 });
