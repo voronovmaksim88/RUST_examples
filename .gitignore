@@ -1,3 +1,6 @@
+# Local clone used only to build/install cargo-makepad (optional)
+_makepad_tool/
+
 # Rust build artifacts
 target/
 **/*.rs.bk
