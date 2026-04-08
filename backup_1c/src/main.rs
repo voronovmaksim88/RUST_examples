@@ -5,6 +5,8 @@ use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::thread;
+use std::time::Duration;
 
 #[cfg(windows)]
 use winapi::um::consoleapi::{GetConsoleMode, SetConsoleMode};
@@ -77,11 +79,24 @@ fn enable_ansi_support() {
 #[cfg(not(windows))]
 fn enable_ansi_support() {}
 
+fn wait_for_sync(seconds: u64) {
+    println!("Ожидание синхронизации облачного хранилища...");
+    for remaining in (1..=seconds).rev() {
+        print!("\rОсталось: {:>3} сек.", remaining);
+        io::stdout().flush().unwrap();
+        thread::sleep(Duration::from_secs(1));
+    }
+    println!("\r{}", "Синхронизация завершена.              ".green());
+    println!();
+}
+
 fn main() {
     enable_ansi_support();
 
     println!("Создание резервной копии БД 1С");
     println!();
+
+    wait_for_sync(180);
 
     let exe_dir = get_exe_dir();
     let config_path = exe_dir.join(CONFIG_FILENAME);
