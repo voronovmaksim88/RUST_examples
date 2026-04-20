@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">test_tauri_android_modbus</string>
+    <string name="main_activity_title">test_tauri_android_modbus</string>
+</resources>
