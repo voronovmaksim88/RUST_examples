@@ -3902,6 +3902,7 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tauri-plugin-opener",
+ "tokio-modbus",
 ]
 
 [[package]]
@@ -3997,6 +3998,22 @@ dependencies = [
  "pin-project-lite",
  "socket2",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "tokio-modbus"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e82dfb1a3265ca939b7a76103c89ad770f8cc0ea8de76c83d352e7c1fc5b2c8b"
+dependencies = [
+ "async-trait",
+ "byteorder",
+ "bytes",
+ "futures-util",
+ "log",
+ "smallvec",
+ "tokio",
+ "tokio-util",
 ]
 
 [[package]]
