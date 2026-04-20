@@ -1,9 +1,63 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
+import { invoke } from "@tauri-apps/api/core";
 
 const deviceAddress = ref("1");
 const tcpHost = ref("192.168.88.28");
 const tcpPort = ref("502");
+
+const uptimeLabel = "uptime";
+const uptimeValue = ref("—");
+const uptimeError = ref("");
+
+let timer: ReturnType<typeof setInterval> | null = null;
+let busy = false;
+
+async function pollUptimeOnce() {
+  if (busy) return;
+  busy = true;
+  try {
+    const unit = Number.parseInt(deviceAddress.value, 10);
+    const port = Number.parseInt(tcpPort.value, 10);
+    if (Number.isNaN(unit) || unit < 0 || unit > 255) {
+      uptimeError.value = "Адрес устройства: число 0…255";
+      uptimeValue.value = "—";
+      return;
+    }
+    if (Number.isNaN(port) || port < 1 || port > 65535) {
+      uptimeError.value = "TCP порт: число 1…65535";
+      uptimeValue.value = "—";
+      return;
+    }
+
+    const value = await invoke<string>("read_uptime_register", {
+      params: {
+        deviceAddress: unit,
+        tcpHost: tcpHost.value.trim(),
+        tcpPort: port,
+      },
+    });
+    uptimeValue.value = value;
+    uptimeError.value = "";
+  } catch (e) {
+    uptimeValue.value = "—";
+    uptimeError.value = e instanceof Error ? e.message : String(e);
+  } finally {
+    busy = false;
+  }
+}
+
+onMounted(() => {
+  void pollUptimeOnce();
+  timer = setInterval(() => void pollUptimeOnce(), 1000);
+});
+
+onUnmounted(() => {
+  if (timer != null) {
+    clearInterval(timer);
+    timer = null;
+  }
+});
 </script>
 
 <template>
@@ -22,6 +76,12 @@ const tcpPort = ref("502");
         <input v-model="tcpPort" type="text" inputmode="numeric" autocomplete="off" />
       </label>
     </form>
+
+    <section class="uptime-section" aria-live="polite">
+      <h2 class="uptime-heading">{{ uptimeLabel }}</h2>
+      <p class="uptime-value">{{ uptimeValue }}</p>
+      <p v-if="uptimeError" class="uptime-error">{{ uptimeError }}</p>
+    </section>
   </main>
 </template>
 
@@ -45,6 +105,45 @@ const tcpPort = ref("502");
 .label {
   font-weight: 500;
   font-size: 0.95rem;
+}
+
+.uptime-section {
+  margin-top: 2rem;
+  text-align: center;
+  width: 100%;
+  max-width: 24rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.uptime-heading {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+}
+
+.uptime-value {
+  margin: 0;
+  font-size: clamp(2.25rem, 10vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  word-break: break-all;
+}
+
+.uptime-error {
+  margin: 0.75rem 0 0;
+  font-size: 0.9rem;
+  color: #b00020;
+  line-height: 1.35;
+}
+
+@media (prefers-color-scheme: dark) {
+  .uptime-error {
+    color: #ff8a8a;
+  }
 }
 </style>
 
