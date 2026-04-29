@@ -1,0 +1,8 @@
+[package]
+name = "svg_layer_splitter"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+regex = "1"
+roxmltree = "0.21"
