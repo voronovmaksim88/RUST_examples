@@ -1,0 +1,8 @@
+[package]
+name = "egui-example"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+eframe = "0.27"  # основной фреймворк
+egui = "0.27"    # UI библиотека
